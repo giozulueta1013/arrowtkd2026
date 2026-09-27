@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrow Taekwondo | Elite Private Training</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Montserrat', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                            900: '#881337',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Montserrat', sans-serif; }
+        .hero-pattern {
+            background-color: #0f172a;
+            background-image: radial-gradient(at 90% 10%, rgba(225, 29, 72, 0.15) 0px, transparent 50%),
+                              radial-gradient(at 10% 90%, rgba(15, 23, 42, 0.9) 0px, transparent 50%);
+        }
+        #leaflet-map { height: 180px; width: 100%; border-radius: 0.75rem; z-index: 10; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-rose-500 selection:text-white">
+
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-white shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Logo Section -->
+            <a href="#home" onclick="router('home')" class="flex items-center gap-3 group focus:outline-none">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-rose-600 to-rose-400 p-0.5 shadow-lg shadow-rose-600/30 flex items-center justify-center transform group-hover:scale-105 transition">
+                    <div class="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center relative overflow-hidden">
+                        <!-- Up-sideways arrow pointing up and to the right -->
+                        <svg class="w-6 h-6 text-rose-500 absolute top-1.5 left-2 transform rotate-45" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                        </svg>
+                        <!-- Hill-like shape made of dots at the bottom -->
+                        <div class="absolute bottom-1 w-full flex justify-center gap-0.5 px-1">
+                            <span class="w-1 h-1 bg-rose-400 rounded-full"></span>
+                            <span class="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                            <span class="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                            <span class="w-1 h-1 bg-rose-400 rounded-full"></span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold tracking-wider bg-gradient-to-r from-white via-slate-100 to-rose-400 bg-clip-text text-transparent">ARROW</span>
+                    <span class="block text-xs font-semibold tracking-widest text-rose-500 uppercase">Taekwondo</span>
+                </div>
+            </a>
+
+            <!-- Desktop Nav Menu -->
+            <nav class="hidden md:flex items-center gap-8 font-medium text-sm text-slate-300">
+                <a href="#about" onclick="router('home'); scrollToSection('about')" class="hover:text-rose-400 transition">About Arrow Taekwondo</a>
+                <a href="#why" onclick="router('home'); scrollToSection('why')" class="hover:text-rose-400 transition">Why Choose Private Classes</a>
+                <a href="#contact" onclick="router('home'); scrollToSection('contact')" class="hover:text-rose-400 transition">Contact Us</a>
+            </nav>
+
+            <!-- Auth Actions -->
+            <div class="flex items-center gap-3">
+                <div id="auth-nav-guest" class="flex items-center gap-3">
+                    <button onclick="openModal('login-modal')" class="px-4 py-2 text-sm font-semibold text-slate-200 hover:text-white transition">Login</button>
+                    <button onclick="openModal('signup-modal')" class="px-5 py-2.5 text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg shadow-rose-600/30 transition transform hover:-translate-y-0.5">Register</button>
+                </div>
+                <div id="auth-nav-user" class="hidden flex items-center gap-4">
+                    <button id="nav-dashboard-btn" onclick="openDashboard()" class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-medium border border-slate-700 transition">
+                        <img id="nav-user-avatar" src="https://placehold.co/32x32/rose/white?text=U" class="w-6 h-6 rounded-full object-cover" alt="User">
+                        <span id="nav-user-name">Dashboard</span>
+                    </button>
+                    <button onclick="logoutUser()" class="text-slate-400 hover:text-rose-400 p-2 transition" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow">
+        <!-- HOME VIEW -->
+        <div id="view-home" class="view-section">
+            <!-- Hero Section -->
+            <section class="hero-pattern text-white py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+                <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                    <div class="lg:col-span-7 space-y-6">
+                        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold tracking-wide uppercase">
+                            <i class="fa-solid fa-shield-halved"></i> Elite Private Martial Arts Coaching
+                        </div>
+                        <h1 class="text-4xl sm:text-6xl font-black tracking-tight leading-none">
+                            Master Your Art With <span class="bg-gradient-to-r from-rose-500 to-rose-300 bg-clip-text text-transparent">Tailored Precision</span>
+                        </h1>
+                        <p class="text-lg text-slate-300 max-w-xl font-normal leading-relaxed">
+                            Experience individualized Taekwondo private training designed specifically for your goals. Whether Poomsae or Kyorugi, beginners to currently enrolled practitioners from any background are welcome.
+                        </p>
+                        <div class="flex flex-wrap gap-4 pt-4">
+                            <button onclick="openModal('signup-modal')" class="px-8 py-4 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-xl shadow-rose-600/40 transition transform hover:-translate-y-1">
+                                Start Your Journey <i class="fa-solid fa-arrow-right ml-2"></i>
+                            </button>
+                            <button onclick="scrollToSection('about')" class="px-8 py-4 bg-slate-800/80 hover:bg-slate-800 text-slate-200 font-bold rounded-xl border border-slate-700 transition">
+                                Learn More
+                            </button>
+                        </div>
+                        <!-- Live Admin Announcement Banner -->
+                        <div id="hero-announcement" class="hidden mt-6 p-4 rounded-xl bg-slate-800/90 border border-rose-500/30 text-sm flex items-start gap-3">
+                            <div class="text-rose-500 text-lg mt-0.5"><i class="fa-solid fa-bullhorn"></i></div>
+                            <div>
+                                <span class="font-bold text-white">Announcement:</span>
+                                <p id="announcement-text" class="text-slate-300 mt-0.5"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5 relative">
+                        <div class="relative mx-auto max-w-md bg-gradient-to-br from-rose-500/20 to-slate-800 p-2 rounded-3xl border border-slate-700 shadow-2xl">
+                            <div class="bg-slate-900 rounded-2xl p-6 space-y-6 text-center">
+                                <div class="w-20 h-20 bg-rose-600/20 rounded-2xl mx-auto flex items-center justify-center text-rose-500 text-3xl">
+                                    <i class="fa-solid fa-person-kicking"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-white">Next-Gen Booking System</h3>
+                                <p class="text-sm text-slate-400">Monday to Saturday, 9:00 AM to 6:00 PM. Book verified time slots seamlessly once opened by admin.</p>
+                                <div class="p-3 bg-slate-800/60 rounded-xl text-xs text-rose-400 font-medium border border-slate-700/60">
+                                    <i class="fa-regular fa-clock mr-1"></i> Mon-Sat Slots Managed Live by Admin
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="about" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+                <div class="text-center max-w-3xl mx-auto mb-16 space-y-4">
+                    <span class="text-rose-600 font-bold text-xs uppercase tracking-widest">About Arrow Taekwondo</span>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900">Mission & Vision</h2>
+                    <p class="text-slate-600">We focus on individual tailored programs rather than a one-size-fits-all approach, emphasizing inclusivity for all practitioners regardless of affiliations.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-4 hover:shadow-md transition">
+                        <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                            <i class="fa-solid fa-bullseye"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900">Tailored Programs</h3>
+                        <p class="text-slate-600 leading-relaxed">
+                            Our private sessions customize training intensity, technique focus, and progression milestones to suit each student's exact capabilities, avoiding cookie-cutter group constraints.
+                        </p>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-4 hover:shadow-md transition">
+                        <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                            <i class="fa-solid fa-hands-holding-child"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900">Total Inclusivity</h3>
+                        <p class="text-slate-600 leading-relaxed">
+                            We welcome practitioners of all backgrounds, levels (from beginner white belts to currently enrolled students), and regardless of gym affiliations.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="why" class="py-20 bg-slate-900 text-white px-4 sm:px-6 lg:px-8">
+                <div class="max-w-7xl mx-auto">
+                    <div class="text-center max-w-3xl mx-auto mb-16 space-y-4">
+                        <span class="text-rose-500 font-bold text-xs uppercase tracking-widest">Benefits</span>
+                        <h2 class="text-3xl sm:text-4xl font-extrabold">Why Choose Private Classes?</h2>
+                        <p class="text-slate-400">Accelerate your technical mastery and confidence with undivided instructor attention.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="bg-slate-800/80 p-8 rounded-2xl border border-slate-700 space-y-4">
+                            <div class="text-rose-500 text-2xl"><i class="fa-solid fa-gauge-high"></i></div>
+                            <h3 class="text-lg font-bold">Accelerated Progress</h3>
+                            <p class="text-sm text-slate-400 leading-relaxed">100% instructor focus ensures correct biomechanics, sharper kicks, and refined forms in a fraction of usual group training time.</p>
+                        </div>
+                        <div class="bg-slate-800/80 p-8 rounded-2xl border border-slate-700 space-y-4">
+                            <div class="text-rose-500 text-2xl"><i class="fa-solid fa-sliders"></i></div>
+                            <h3 class="text-lg font-bold">Flexible Scheduling</h3>
+                            <p class="text-sm text-slate-400 leading-relaxed">Book sessions Monday through Saturday between 9:00 AM and 6:00 PM at your preferred venue address.</p>
+                        </div>
+                        <div class="bg-slate-800/80 p-8 rounded-2xl border border-slate-700 space-y-4">
+                            <div class="text-rose-500 text-2xl"><i class="fa-solid fa-award"></i></div>
+                            <h3 class="text-lg font-bold">Focused Specialization</h3>
+                            <p class="text-sm text-slate-400 leading-relaxed">Choose precise deep-dives into Poomsae forms or Kyorugi sparring combat strategy based on your personal goals.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contact" class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                    <div class="lg:col-span-5 space-y-6">
+                        <span class="text-rose-600 font-bold text-xs uppercase tracking-widest">Get In Touch</span>
+                        <h2 class="text-3xl font-extrabold text-slate-900">Have Questions? Reach Out To Us</h2>
+                        <p class="text-slate-600 leading-relaxed">
+                            Send us your inquiry, and our coaching staff will review and respond promptly.
+                        </p>
+                        <div class="space-y-4 text-sm text-slate-700">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-phone"></i></div>
+                                <span>+63 900 000 0000 / Private Coaching Hotline</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><i class="fa-solid fa-clock"></i></div>
+                                <span>Mon - Sat: 9:00 AM - 6:00 PM</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-7 bg-white p-8 sm:p-10 rounded-3xl shadow-lg border border-slate-200">
+                        <form onsubmit="handleContactSubmit(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Your Name</label>
+                                    <input type="text" id="contact-name" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Email Address</label>
+                                    <input type="email" id="contact-email" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Phone Number</label>
+                                <input type="text" id="contact-phone" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Message / Inquiry</label>
+                                <textarea id="contact-message" rows="4" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none text-sm"></textarea>
+                            </div>
+                            <button type="submit" class="w-full py-4 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30 transition">
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- DASHBOARD VIEW -->
+        <div id="view-dashboard" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <div id="dashboard-content-area"></div>
+        </div>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center text-white font-bold text-xs">
+                    <i class="fa-solid fa-arrow-up-right"></i>
+                </div>
+                <span class="text-white font-bold tracking-wider">ARROW TAEKWONDO</span>
+            </div>
+            <p>&copy; 2026 Arrow Taekwondo Private Training. All rights reserved.</p>
+            <div class="flex gap-4">
+                <a href="#" class="hover:text-rose-400"><i class="fa-brands fa-facebook-f"></i></a>
+                <a href="#" class="hover:text-rose-400"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#" class="hover:text-rose-400"><i class="fa-brands fa-youtube"></i></a>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border border-slate-100">
+            <button onclick="closeModal('login-modal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-black text-slate-900">Welcome Back</h3>
+                <p class="text-xs text-slate-500 mt-1">Log in to manage bookings, view history, and train</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Email or Admin Username</label>
+                    <input type="text" id="login-email" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none text-sm" placeholder="user@email.com or slideback45@arrowtkd">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Password</label>
+                    <input type="password" id="login-password" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none text-sm" placeholder="••••••••">
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <button type="button" onclick="switchModal('login-modal', 'forgot-modal')" class="text-rose-600 hover:underline font-medium">Forgot Password?</button>
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30 transition">Log In</button>
+            </form>
+            <div class="mt-6 text-center text-xs text-slate-600">
+                Not yet a member? <button onclick="switchModal('login-modal', 'signup-modal')" class="text-rose-600 font-bold hover:underline">Register here!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIGNUP MODAL -->
+    <div id="signup-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl relative border border-slate-100 my-8">
+            <button onclick="closeModal('signup-modal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div class="text-center mb-6">
+                <h3 class="text-2xl font-black text-slate-900">Member Registration</h3>
+                <p class="text-xs text-slate-500 mt-1">Join Arrow Taekwondo Private Training</p>
+            </div>
+            <form onsubmit="handleSignup(event)" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Student Name</label>
+                        <input type="text" id="signup-name" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Age</label>
+                        <input type="number" id="signup-age" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Birthdate</label>
+                        <input type="date" id="signup-birthdate" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Current Belt</label>
+                        <select id="signup-belt" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                            <option value="White Belt">White Belt</option>
+                            <option value="Yellow Belt">Yellow Belt</option>
+                            <option value="Green Belt">Green Belt</option>
+                            <option value="Blue Belt">Blue Belt</option>
+                            <option value="Red Belt">Red Belt</option>
+                            <option value="Black Belt">Black Belt</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Affiliated Gym / Organization</label>
+                        <input type="text" id="signup-gym" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm" placeholder="Optional">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Parent / Guardian Name</label>
+                        <input type="text" id="signup-guardian" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Phone Number</label>
+                        <input type="text" id="signup-phone" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Email Address</label>
+                        <input type="email" id="signup-email" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Student Photo Upload</label>
+                    <input type="file" id="signup-photo" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Password</label>
+                    <input type="password" id="signup-password" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                </div>
+                <div class="flex items-start gap-2 pt-2">
+                    <input type="checkbox" id="signup-terms" required class="mt-1 rounded text-rose-600 focus:ring-rose-500">
+                    <label for="signup-terms" class="text-xs text-slate-600">I agree to the <span class="text-rose-600 font-semibold">Privacy, Security, and Safety Guidelines</span> before completing signup.</label>
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30 transition">Complete Registration</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- FORGOT PASSWORD MODAL -->
+    <div id="forgot-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border border-slate-100">
+            <button onclick="closeModal('forgot-modal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-black text-slate-900">Reset Password</h3>
+                <p class="text-xs text-slate-500 mt-1">Recover password through OTP sent to your mobile number or email</p>
+            </div>
+            <form onsubmit="handleForgot(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Registered Email or Phone Number</label>
+                    <input type="text" id="forgot-input" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm" placeholder="email@domain.com or phone">
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30 transition">Send OTP</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- BOOKING MODAL -->
+    <div id="booking-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-8 shadow-2xl relative border border-slate-100 my-8">
+            <button onclick="closeModal('booking-modal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div class="text-center mb-6">
+                <h3 class="text-2xl font-black text-slate-900">Book Private Training</h3>
+                <p class="text-xs text-slate-500 mt-1">Mon-Sat, 9:00 AM to 6:00 PM (Available slots opened by Admin)</p>
+            </div>
+            <form onsubmit="handleBookingSubmit(event)" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">What topic do you wish on your booking?</label>
+                    <select id="booking-topic" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold">
+                        <option value="Poomsae">Poomsae (Forms & Precision)</option>
+                        <option value="Kyorugi">Kyorugi (Sparring & Combat Strategy)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Preferred Venue Address & Interactive Pin</label>
+                    <input type="text" id="booking-venue" required class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm mb-2" placeholder="e.g., Home Studio, Main Hall Address">
+                    <div id="leaflet-map"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Select Available Time Slot (Mon-Sat, 9am - 6pm)</label>
+                    <div id="booking-slots-container" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                    <p id="no-slots-notice" class="hidden text-xs text-rose-600 font-semibold mt-2 text-center">All time slots are currently greyed out until admin opens them. You will receive an email notification when admin opens time slots!</p>
+                </div>
+                <div class="pt-2 border-t border-slate-100">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Payment via QR Code Upload (GCash/Bank Transfer)</label>
+                    <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-4">
+                        <div class="w-20 h-20 bg-white border border-slate-300 rounded-lg p-1 flex items-center justify-center shadow-sm">
+                            <div class="text-center">
+                                <i class="fa-solid fa-qrcode text-3xl text-slate-800"></i>
+                                <span class="block text-[9px] text-slate-500 font-bold">ARROW QR</span>
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-600 space-y-1">
+                            <p class="font-bold text-slate-900">Scan to pay training fee</p>
+                            <p>Upload screenshot of payment. Bookings have a <strong>2-hour holding period</strong> until admin verification and approval.</p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <input type="file" id="booking-payment-proof" accept="image/*" required class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-4 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30 transition">Confirm Booking & Upload Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Leaflet JS CDN -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const DB_KEY_USERS = 'arrow_tkd_users_v3';
+        const DB_KEY_SESSIONS = 'arrow_tkd_sessions_v3';
+        const DB_KEY_SESSION = 'arrow_tkd_current_session_v3';
+        const DB_KEY_ANNOUNCEMENT = 'arrow_tkd_announcement_v3';
+        const DB_KEY_SLOTS = 'arrow_tkd_slots_v3';
+
+        const ADMIN_USER = {
+            id: 'admin_slideback',
+            name: 'Master Admin',
+            email: 'slideback45@arrowtkd',
+            role: 'admin',
+            avatar: 'https://placehold.co/100x100/slate/white?text=Admin'
+        };
+
+        // Initialize Default Time Slots (Mon-Sat 9am to 6pm, all greyed out / closed by default)
+        function initDefaultSlots() {
+            let slots = JSON.parse(localStorage.getItem(DB_KEY_SLOTS));
+            if (!slots) {
+                slots = [];
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const times = ['09:00 AM - 10:00 AM', '10:00 AM - 11:00 AM', '11:00 AM - 12:00 PM', '01:00 PM - 02:00 PM', '02:00 PM - 03:00 PM', '03:00 PM - 04:00 PM', '04:00 PM - 05:00 PM', '05:00 PM - 06:00 PM'];
+                
+                days.forEach(day => {
+                    times.forEach(time => {
+                        slots.push({
+                            id: `${day}-${time}`.replace(/\s+/g, ''),
+                            day: day,
+                            time: time,
+                            isOpen: false, // Grayed out until admin opens
+                            isTaken: false,
+                            bookedBy: null
+                        });
+                    });
+                });
+                localStorage.setItem(DB_KEY_SLOTS, JSON.stringify(slots));
+            }
+            return slots;
+        }
+
+        function getSlots() {
+            return JSON.parse(localStorage.getItem(DB_KEY_SLOTS)) || initDefaultSlots();
+        }
+
+        function saveSlots(slots) {
+            localStorage.setItem(DB_KEY_SLOTS, JSON.stringify(slots));
+        }
+
+        function getUsers() {
+            return JSON.parse(localStorage.getItem(DB_KEY_USERS)) || [];
+        }
+
+        function saveUsers(users) {
+            localStorage.setItem(DB_KEY_USERS, JSON.stringify(users));
+        }
+
+        function getSessions() {
+            return JSON.parse(localStorage.getItem(DB_KEY_SESSIONS)) || [];
+        }
+
+        function saveSessions(sessions) {
+            localStorage.setItem(DB_KEY_SESSIONS, JSON.stringify(sessions));
+        }
+
+        function getCurrentUser() {
+            const raw = localStorage.getItem(DB_KEY_SESSION);
+            return raw ? JSON.parse(raw) : null;
+        }
+
+        function setCurrentUser(user) {
+            if (user) {
+                localStorage.setItem(DB_KEY_SESSION, JSON.stringify(user));
+            } else {
+                localStorage.removeItem(DB_KEY_SESSION);
+            }
+            updateNavigation();
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto px-5 py-3 rounded-2xl shadow-xl text-white text-sm font-semibold flex items-center gap-3 transform transition-all duration-300 translate-y-2 opacity-0 ${type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 50);
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function router(view) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (view === 'dashboard') {
+                renderDashboard();
+            }
+        }
+
+        function scrollToSection(id) {
+            router('home');
+            setTimeout(() => {
+                const el = document.getElementById(id);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            document.getElementById(modalId).classList.add('flex');
+            if (modalId === 'booking-modal') {
+                renderBookingSlots();
+                setTimeout(() => initMap(), 200);
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('flex');
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function switchModal(closeId, openId) {
+            closeModal(closeId);
+            openModal(openId);
+        }
+
+        function updateNavigation() {
+            const user = getCurrentUser();
+            const guestNav = document.getElementById('auth-nav-guest');
+            const userNav = document.getElementById('auth-nav-user');
+            const avatar = document.getElementById('nav-user-avatar');
+            const nameSpan = document.getElementById('nav-user-name');
+            const annBanner = document.getElementById('hero-announcement');
+            const annText = document.getElementById('announcement-text');
+
+            const announcement = localStorage.getItem(DB_KEY_ANNOUNCEMENT);
+            if (announcement) {
+                annBanner.classList.remove('hidden');
+                annText.innerText = announcement;
+            } else {
+                annBanner.classList.add('hidden');
+            }
+
+            if (user) {
+                guestNav.classList.add('hidden');
+                userNav.classList.remove('hidden');
+                avatar.src = user.photo || 'https://placehold.co/32x32/rose/white?text=U';
+                nameSpan.innerText = user.role === 'admin' ? 'Admin Master' : user.name.split(' ')[0];
+            } else {
+                guestNav.classList.remove('hidden');
+                userNav.classList.add('hidden');
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const emailInput = document.getElementById('login-email').value.trim();
+            const passInput = document.getElementById('login-password').value;
+
+            if (emailInput === ADMIN_USER.email && passInput === '06172025ArrowTKD') {
+                setCurrentUser(ADMIN_USER);
+                closeModal('login-modal');
+                showToast('Logged in as Master Admin');
+                router('dashboard');
+                return;
+            }
+
+            const users = getUsers();
+            const found = users.find(u => u.email === emailInput && u.password === passInput);
+            if (found) {
+                setCurrentUser(found);
+                closeModal('login-modal');
+                showToast(`Welcome back, ${found.name}!`);
+                router('dashboard');
+            } else {
+                showToast('Invalid credentials or password', 'error');
+            }
+        }
+
+        function handleSignup(event) {
+            event.preventDefault();
+            const name = document.getElementById('signup-name').value;
+            const age = document.getElementById('signup-age').value;
+            const birthdate = document.getElementById('signup-birthdate').value;
+            const belt = document.getElementById('signup-belt').value;
+            const gym = document.getElementById('signup-gym').value;
+            const guardian = document.getElementById('signup-guardian').value;
+            const phone = document.getElementById('signup-phone').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const photoInput = document.getElementById('signup-photo');
+
+            let photoUrl = 'https://placehold.co/150x150/rose/white?text=Student';
+            if (photoInput.files && photoInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    completeRegistration(e.target.result);
+                };
+                reader.readAsDataURL(photoInput.files[0]);
+            } else {
+                completeRegistration(photoUrl);
+            }
+
+            function completeRegistration(pUrl) {
+                const users = getUsers();
+                if (users.some(u => u.email === email)) {
+                    showToast('Email already registered!', 'error');
+                    return;
+                }
+                const newUser = {
+                    id: 'user_' + Date.now(),
+                    name, age, birthdate, belt, gym, guardian, phone, email, password,
+                    photo: pUrl,
+                    role: 'member',
+                    notes: [],
+                    createdAt: new Date().toISOString()
+                };
+                users.push(newUser);
+                saveUsers(users);
+                setCurrentUser(newUser);
+                closeModal('signup-modal');
+                showToast('Registration successful! Welcome to Arrow Taekwondo.');
+                router('dashboard');
+            }
+        }
+
+        function handleForgot(event) {
+            event.preventDefault();
+            closeModal('forgot-modal');
+            showToast('OTP sent successfully to your mobile number or email for password recovery.');
+        }
+
+        function logoutUser() {
+            setCurrentUser(null);
+            showToast('Logged out successfully');
+            router('home');
+        }
+
+        function handleContactSubmit(event) {
+            event.preventDefault();
+            const name = document.getElementById('contact-name').value;
+            showToast(`Inquiry sent successfully. Thank you, ${name}! We will get back to you.`);
+            event.target.reset();
+        }
+
+        let mapInstance = null;
+        let mapMarker = null;
+
+        function initMap() {
+            const container = document.getElementById('leaflet-map');
+            if (!container) return;
+            if (mapInstance) {
+                mapInstance.invalidateSize();
+                return;
+            }
+
+            // Default coordinates (e.g. Manila / central point)
+            const defaultLat = 14.5995;
+            const defaultLng = 120.9842;
+
+            mapInstance = L.map('leaflet-map').setView([defaultLat, defaultLng], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(mapInstance);
+
+            mapMarker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(mapInstance);
+
+            mapMarker.on('dragend', function(e) {
+                const pos = mapMarker.getLatLng();
+                document.getElementById('booking-venue').value = `Pinned Location: Lat ${pos.lat.toFixed(4)}, Lng ${pos.lng.toFixed(4)}`;
+            });
+
+            mapInstance.on('click', function(e) {
+                mapMarker.setLatLng(e.latlng);
+                document.getElementById('booking-venue').value = `Pinned Location: Lat ${e.latlng.lat.toFixed(4)}, Lng ${e.latlng.lng.toFixed(4)}`;
+            });
+        }
+
+        let selectedSlotId = null;
+
+        function renderBookingSlots() {
+            const slots = getSlots();
+            const container = document.getElementById('booking-slots-container');
+            const notice = document.getElementById('no-slots-notice');
+            container.innerHTML = '';
+
+            const openedSlots = slots.filter(s => s.isOpen);
+            if (openedSlots.length === 0) {
+                notice.classList.remove('hidden');
+            } else {
+                notice.classList.add('hidden');
+            }
+
+            slots.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                let btnClass = 'p-3 rounded-xl border text-left text-xs font-semibold transition flex flex-col justify-between ';
+                
+                if (!slot.isOpen) {
+                    btnClass += 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60';
+                    btn.disabled = true;
+                } else if (slot.isTaken) {
+                    btnClass += 'bg-slate-200 border-slate-300 text-slate-500 cursor-not-allowed line-through';
+                    btn.disabled = true;
+                } else if (selectedSlotId === slot.id) {
+                    btnClass += 'bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-600/30';
+                } else {
+                    btnClass += 'bg-white border-slate-300 text-slate-800 hover:border-rose-500 hover:shadow-sm';
+                    btn.onclick = () => {
+                        selectedSlotId = slot.id;
+                        renderBookingSlots();
+                    };
+                }
+
+                btn.className = btnClass;
+                btn.innerHTML = `
+                    <span class="font-bold">${slot.day}</span>
+                    <span class="mt-1">${slot.time}</span>
+                    <span class="text-[10px] mt-2 font-normal ${!slot.isOpen ? 'text-slate-400' : (slot.isTaken ? 'text-slate-500' : 'text-rose-600 font-bold')}">${!slot.isOpen ? 'Unavailable' : (slot.isTaken ? 'Taken' : 'Available')}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function handleBookingSubmit(event) {
+            event.preventDefault();
+            const user = getCurrentUser();
+            if (!user) {
+                openModal('login-modal');
+                return;
+            }
+            if (!selectedSlotId) {
+                showToast('Please select an available time slot.', 'error');
+                return;
+            }
+
+            const topic = document.getElementById('booking-topic').value;
+            const venue = document.getElementById('booking-venue').value;
+            const slots = getSlots();
+            const slot = slots.find(s => s.id === selectedSlotId);
+
+            if (!slot || !slot.isOpen || slot.isTaken) {
+                showToast('Selected slot is no longer available.', 'error');
+                return;
+            }
+
+            slot.isTaken = true;
+            slot.bookedBy = user.id;
+            saveSlots(slots);
+
+            const sessions = getSessions();
+            const newBooking = {
+                id: 'booking_' + Date.now(),
+                userId: user.id,
+                userName: user.name,
+                userPhoto: user.photo,
+                topic,
+                venue,
+                slotDay: slot.day,
+                slotTime: slot.time,
+                slotId: slot.id,
+                status: 'Pending Verification (2-hr holding period)',
+                createdAt: new Date().toISOString()
+            };
+
+            sessions.push(newBooking);
+            saveSessions(sessions);
+
+            closeModal('booking-modal');
+            selectedSlotId = null;
+            showToast('Booking submitted successfully! 2-hour holding period active until admin approval.');
+            router('dashboard');
+        }
+
+        function renderDashboard() {
+            const user = getCurrentUser();
+            const area = document.getElementById('dashboard-content-area');
+            if (!user) {
+                router('home');
+                return;
+            }
+
+            if (user.role === 'admin') {
+                renderAdminDashboard(area);
+            } else {
+                renderMemberDashboard(area, user);
+            }
+        }
+
+        function renderMemberDashboard(area, user) {
+            const sessions = getSessions().filter(s => s.userId === user.id);
+            
+            area.innerHTML = `
+                <div class="space-y-8">
+                    <!-- Profile Header -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="flex items-center gap-6">
+                            <img src="${user.photo}" class="w-24 h-24 rounded-2xl object-cover border-4 border-rose-500 shadow-md">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-3 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full uppercase tracking-wider">${user.belt}</span>
+                                    <button onclick="promptUpdateBelt()" class="text-xs text-rose-600 font-semibold hover:underline"><i class="fa-solid fa-pen mr-1"></i> Update Belt</button>
+                                </div>
+                                <h1 class="text-2xl font-black text-slate-900 mt-2">${user.name}</h1>
+                                <p class="text-sm text-slate-500">Age: ${user.age} &bull; Gym / Affiliation: ${user.gym || 'Independent / None'} &bull; Guardian: ${user.guardian}</p>
+                            </div>
+                        </div>
+                        <button onclick="openModal('booking-modal')" class="px-6 py-3.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-600/30 transition">
+                            <i class="fa-solid fa-calendar-plus mr-2"></i> Book Private Class
+                        </button>
+                    </div>
+
+                    <!-- Bookings & Transaction History -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2 space-y-6">
+                            <h2 class="text-xl font-bold text-slate-900">Your Booking & Transaction History</h2>
+                            <div class="space-y-4">
+                                ${sessions.length === 0 ? '<div class="bg-white p-8 rounded-2xl text-center text-slate-500 border border-slate-200">No bookings yet. Click Book Private Class to schedule your session!</div>' : 
+                                    sessions.map(s => `
+                                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-bold text-slate-900 text-lg">${s.topic} Session</span>
+                                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${s.status.includes('Approved') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${s.status}</span>
+                                                </div>
+                                                <p class="text-sm text-slate-600"><i class="fa-regular fa-calendar mr-1 text-rose-500"></i> ${s.slotDay}, ${s.slotTime}</p>
+                                                <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot mr-1 text-slate-400"></i> ${s.venue}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="text-xs text-slate-400 block">ID: ${s.id}</span>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Notes & Class Notes -->
+                        <div class="space-y-6">
+                            <h2 class="text-xl font-bold text-slate-900">Class Notes & Feedback</h2>
+                            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm">
+                                    <p class="font-bold text-slate-800">Current Belt: ${user.belt}</p>
+                                    <p class="text-xs text-slate-500 mt-1">You can update your belt rank once exams are taken with your respective gym.</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Instructor Notes</span>
+                                    ${user.notes && user.notes.length > 0 ? user.notes.map(n => `<div class="p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-slate-700">${n}</div>`).join('') : '<p class="text-xs text-slate-400 italic">No instructor notes recorded yet.</p>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function promptUpdateBelt() {
+            const user = getCurrentUser();
+            const newBelt = prompt("Enter your new belt rank (e.g., Yellow Belt, Red Belt, Black Belt):", user.belt);
+            if (newBelt) {
+                user.belt = newBelt;
+                setCurrentUser(user);
+                const users = getUsers();
+                const idx = users.findIndex(u => u.id === user.id);
+                if (idx !== -1) {
+                    users[idx].belt = newBelt;
+                    saveUsers(users);
+                }
+                showToast('Belt rank updated successfully!');
+                renderDashboard();
+            }
+        }
+
+        function renderAdminDashboard(area) {
+            const slots = getSlots();
+            const sessions = getSessions();
+            const users = getUsers();
+            const announcement = localStorage.getItem(DB_KEY_ANNOUNCEMENT) || '';
+
+            area.innerHTML = `
+                <div class="space-y-8">
+                    <!-- Admin Header -->
+                    <div class="bg-slate-900 text-white p-8 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div>
+                            <span class="px-3 py-1 bg-rose-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">Master Control</span>
+                            <h1 class="text-3xl font-black mt-2">Admin Dashboard</h1>
+                            <p class="text-sm text-slate-400">Edit schedule, approve bookings, manage student notes, and publish announcements.</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="triggerOpenAllSlotsEmail()" class="px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-600/30 transition">
+                                <i class="fa-solid fa-envelope-circle-check mr-2"></i> Open Slots & Email Users
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Announcement Broadcast Manager -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 class="text-xl font-bold text-slate-900">Make Announcements (Posted on Main Page & Sent to All)</h2>
+                        <div class="flex gap-4">
+                            <input type="text" id="admin-announcement-input" value="${announcement}" placeholder="Type announcement..." class="flex-grow px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                            <button onclick="saveAdminAnnouncement()" class="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm">Publish & Broadcast</button>
+                        </div>
+                    </div>
+
+                    <!-- Time Slots Manager (Mon-Sat 9am-6pm) -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Edit Schedule & Time Slots (Mon-Sat, 9 AM - 6 PM)</h2>
+                            <p class="text-xs text-slate-500">Toggle slot availability. Initially greyed out until admin opens them.</p>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-96 overflow-y-auto p-2">
+                            ${slots.map(s => `
+                                <div class="p-3 rounded-xl border text-xs flex flex-col justify-between gap-2 ${s.isOpen ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-slate-100 border-slate-200 text-slate-500'}">
+                                    <div>
+                                        <span class="font-bold block">${s.day}</span>
+                                        <span>${s.time}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                                        <span class="text-[10px] font-bold ${s.isOpen ? 'text-emerald-600' : 'text-slate-400'}">${s.isOpen ? 'OPEN' : 'CLOSED'}</span>
+                                        <button onclick="toggleSlotStatus('${s.id}')" class="px-2.5 py-1 rounded-lg text-[10px] font-bold text-white ${s.isOpen ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'}">
+                                            ${s.isOpen ? 'Close' : 'Open'}
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Edit Bookings & Approve Bookings -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                        <h2 class="text-xl font-bold text-slate-900">Edit Bookings & Verify Payments (2-Hour Holding Period)</h2>
+                        <div class="space-y-4">
+                            ${sessions.length === 0 ? '<p class="text-sm text-slate-500">No bookings recorded yet.</p>' :
+                                sessions.map(s => `
+                                    <div class="p-6 rounded-2xl border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                        <div class="space-y-1">
+                                            <div class="flex items-center gap-3">
+                                                <span class="font-bold text-slate-900 text-base">${s.userName}</span>
+                                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${s.status.includes('Approved') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${s.status}</span>
+                                            </div>
+                                            <p class="text-sm text-slate-700">Topic: <strong>${s.topic}</strong> &bull; ${s.slotDay}, ${s.slotTime}</p>
+                                            <p class="text-xs text-slate-500">Venue: ${s.venue}</p>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            ${!s.status.includes('Approved') ? `
+                                                <button onclick="approveBooking('${s.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">Verify & Approve Payment</button>
+                                            ` : `<span class="text-xs font-bold text-emerald-600"><i class="fa-solid fa-check mr-1"></i> Approved</span>`}
+                                            <button onclick="deleteBooking('${s.id}')" class="px-3 py-2 bg-slate-100 hover:bg-rose-100 text-rose-600 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Add and View Notes per Student & Transaction History -->
+                    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                        <h2 class="text-xl font-bold text-slate-900">Student Directory, Notes & Transaction History</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${users.map(u => `
+                                <div class="p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <img src="${u.photo}" class="w-12 h-12 rounded-xl object-cover">
+                                        <div>
+                                            <h4 class="font-bold text-slate-900 text-sm">${u.name}</h4>
+                                            <p class="text-xs text-slate-500">${u.email} &bull; <strong class="text-rose-600">${u.belt}</strong> &bull; Gym: ${u.gym || 'None'}</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="openStudentNotesModal('${u.id}')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">View/Add Notes</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleSlotStatus(slotId) {
+            const slots = getSlots();
+            const slot = slots.find(s => s.id === slotId);
+            if (slot) {
+                slot.isOpen = !slot.isOpen;
+                saveSlots(slots);
+                showToast(`Slot ${slot.day} ${slot.time} is now ${slot.isOpen ? 'Opened' : 'Closed'}`);
+                renderDashboard();
+            }
+        }
+
+        function triggerOpenAllSlotsEmail() {
+            const slots = getSlots();
+            slots.forEach(s => s.isOpen = true);
+            saveSlots(slots);
+            showToast('All Mon-Sat slots opened! Email notification sent to all registered users.');
+            renderDashboard();
+        }
+
+        function saveAdminAnnouncement() {
+            const text = document.getElementById('admin-announcement-input').value;
+            localStorage.setItem(DB_KEY_ANNOUNCEMENT, text);
+            showToast('Announcement posted to main page and broadcasted!');
+            updateNavigation();
+        }
+
+        function approveBooking(bookingId) {
+            const sessions = getSessions();
+            const booking = sessions.find(s => s.id === bookingId);
+            if (booking) {
+                booking.status = 'Approved (Payment Verified)';
+                saveSessions(sessions);
+                showToast('Booking approved successfully!');
+                renderDashboard();
+            }
+        }
+
+        function deleteBooking(bookingId) {
+            let sessions = getSessions();
+            sessions = sessions.filter(s => s.id !== bookingId);
+            saveSessions(sessions);
+            showToast('Booking deleted.');
+            renderDashboard();
+        }
+
+        function openStudentNotesModal(userId) {
+            const users = getUsers();
+            const user = users.find(u => u.id === userId);
+            if (!user) return;
+
+            const newNote = prompt(`Add class note or booking history note for ${user.name}:`);
+            if (newNote) {
+                if (!user.notes) user.notes = [];
+                user.notes.push(newNote);
+                saveUsers(users);
+                showToast('Student note added successfully!');
+                renderDashboard();
+            }
+        }
+
+        window.onload = function() {
+            initDefaultSlots();
+            updateNavigation();
+            router('home');
+        };
+    </script>
+</body>
+</html>
